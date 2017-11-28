@@ -3,7 +3,7 @@
 
 CXX = g++
 CC = cc
-CXXFLAGS = -g -I . -D WEBRTC_POSIX
+CXXFLAGS = -g -I . -D WEBRTC_POSIX -pthread
 
 SRC = $(wildcard webrtc/*/*/*.c)
 OBJ = $(patsubst %.c, build/%.o, $(SRC)) build/vad.o
