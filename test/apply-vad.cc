@@ -79,14 +79,14 @@ int main(int argc, char *argv[]) {
 
     int num_speech_frames = 0;
     for (int i = 0; i < vad_end_idx.size(); i++) {
-        num_speech_frames += vad_end_idx[i] - vad_begin_idx[i] + 1;
+        num_speech_frames += vad_end_idx[i] - vad_begin_idx[i] + 10;
     }
     int num_speech_sample = num_speech_frames * num_point_per_frame;
     short *speech_data = (short *)calloc(sizeof(short), num_speech_sample);
 
     int speech_cur = 0;
     for (int i = 0; i < vad_end_idx.size(); i++) {
-        for (int j = vad_begin_idx[i]; j < vad_end_idx[i]+1; j++) {
+        for (int j = vad_begin_idx[i]-9; j < vad_end_idx[i]+1; j++) {
             memcpy(speech_data + speech_cur * num_point_per_frame,
                    data + j * num_point_per_frame, 
                    num_point_per_frame * sizeof(short));
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     //     std::cout << *iter << ' ';
     // }
     // std::cout << '\n';
-    
+
     WavWriter writer(speech_data, num_speech_sample, reader.NumChannel(), 
                         reader.SampleRate(), reader.BitsPerSample());
 
