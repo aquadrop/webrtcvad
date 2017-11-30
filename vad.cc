@@ -8,14 +8,14 @@ Vad::Vad(int mode, unsigned short num_channels, unsigned long sample_rate,
         num_channels(num_channels),
         sample_rate(sample_rate),
         bits_per_sample(bits_per_sample),
-        window_duration_ms(window_duration_ms) {
+        window_duration_ms(window_duration_ms),
+        frame_duration_ms(frame_duration_ms) {
     if (WebRtcVad_Create(&handle_) < 0) {
         printf("Create webrtc vad handle error\n");
         exit(-1);
     }
     WebRtcVad_Init(handle_);
     WebRtcVad_set_mode(handle_, mode_);
-
     block_align = num_channels * bits_per_sample / 8;
     bytes_per_sec = num_channels * sample_rate * bits_per_sample / 8;
     bytes_per_unit = this->frame_duration_ms / 1000 * bytes_per_sec;
@@ -35,7 +35,9 @@ void Vad::SetMode(int mode) {
 }
 
 bool Vad::IsSpeech(const int16_t *data, int num_point_per_frame, int sample_rate) {
+    // printf("%d, %d, %d", num_point_per_frame, sample_rate);
     int ret = WebRtcVad_Process(handle_, sample_rate, data, num_point_per_frame);
+    // printf("%d", ret);
     switch (ret) {
         case 0:
             return false;

@@ -57,14 +57,13 @@ int main(int argc, char *argv[]) {
     printf("mode %d\n", mode);
     printf("frame len %d\n", frame_len);
     Vad vad(mode, num_channel, sample_rate, bits_per_sample, window_len, frame_len);
-
     int num_frames = num_sample / num_point_per_frame;
     std::vector<char> vad_reslut;
 
     for (int i = 0; i < num_sample; i += num_point_per_frame) {
         // last frame 
         if (i + num_point_per_frame > num_sample) break;
-        bool tag = vad.IsSpeech(data + i, frame_len, sample_rate);
+        bool tag = vad.IsSpeech(data + i, num_point_per_frame, sample_rate);
         char state = vad.SlideWindow(tag);
         vad_reslut.push_back(state);
         std::cout << state;

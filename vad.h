@@ -24,7 +24,7 @@ private:
     VadInst* handle_;
     bool trigger_;
     std::deque<int> window_;
-    int window_len_;
+    int window_len_ = 0;
     int window_sum_ = 0;
 
     unsigned short num_channels;
