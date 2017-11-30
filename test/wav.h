@@ -12,18 +12,18 @@
 
 struct WavHeader {
     char riff[4]; // "riff"
-    unsigned int size;  
+    unsigned int size;  //波形块大小
     char wav[4];  // "WAVE"
     char fmt[4];  // "fmt "
-    unsigned int fmt_size; // 
-    unsigned short format; // 
-    unsigned short channels; 
-    unsigned int sample_rate; 
-    unsigned int bytes_per_second; // 
-    unsigned short block_size; 
-    unsigned short bit;  // 
+    unsigned int fmt_size; // 格式块的大小
+    unsigned short format; // 波形编码格式
+    unsigned short channels; //通道数
+    unsigned int sample_rate; //采样率
+    unsigned int bytes_per_second; // 平均每秒波形音频所需要的记录的字节数
+    unsigned short block_size; //一个采样所需要的字节数
+    unsigned short bit;  // 声音文件数据的每个采样的位数
     char data[4]; // "data"
-    unsigned int data_size; //
+    unsigned int data_size; // 数据块大小
 };
 
 class WavReader {
@@ -54,7 +54,12 @@ public:
         int num_data = header.data_size / (bits_per_sample_ / 8);
         data_ = new short[num_data];
         num_sample_ = num_data / num_channel_;
-       
+        // printf("num_channel_ %d\n", num_channel_);
+        // printf("sample_rate_ %d\n", sample_rate_);
+        // printf("bits_per_sample_ %d\n", bits_per_sample_);
+        // printf("data_size %d\n", header.data_size);
+        // printf("num_data %d\n", num_data);
+        // printf("num_sample_ %d\n", num_sample_);
         for (int i = 0; i < num_data; i++) {
             switch (bits_per_sample_) {
                 case 8: {
