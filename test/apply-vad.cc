@@ -14,6 +14,7 @@ int main(int argc, char *argv[]) {
     ParseOptions po(usage);
 
     int frame_len = 30; // 10 ms
+    int window_len = 300; // 300 ms
     po.Register("frame-len", &frame_len, "frame length in millionsenconds, must be 10/20/30");
     int mode = 3; 
     po.Register("mode", &mode, "vad mode");
@@ -42,6 +43,7 @@ int main(int argc, char *argv[]) {
     int num_channel = reader.NumChannel();
     int sample_rate = reader.SampleRate();
     int num_sample = reader.NumSample();
+    int bits_per_sample = reader.BitsPerSample();
     int num_point_per_frame = (int)(frame_len * sample_rate / 1000);
     printf("num_point_per_frame %d\n", num_point_per_frame);
     printf("num_sample %d\n", num_sample);
@@ -53,7 +55,8 @@ int main(int argc, char *argv[]) {
     }
 
     printf("mode %d\n", mode);
-    Vad vad(mode);
+    printf("frame len %d\n", frame_len);
+    Vad vad(mode, num_channel, sample_rate, bits_per_sample, window_len, frame_len);
 
     int num_frames = num_sample / num_point_per_frame;
     std::vector<char> vad_reslut;
@@ -61,7 +64,8 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < num_sample; i += num_point_per_frame) {
         // last frame 
         if (i + num_point_per_frame > num_sample) break;
-        char state = vad.GetFrameState(data+i, frame_len, sample_rate);
+        bool tag = vad.IsSpeech(data + i, frame_len, sample_rate);
+        char state = vad.SlideWindow(tag);
         vad_reslut.push_back(state);
         std::cout << state;
     }
