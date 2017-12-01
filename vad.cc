@@ -90,29 +90,35 @@ char Vad::SlideWindow(int tag) {
     }      
 }
 
-short* ReadPcm() {
-    std::ifstream is("eco.pcm");
+std::pair<int16_t*, int> Vad::ReadPcm(std::string pcm) {
+    std::ifstream is(pcm.c_str());
+    std::pair<int16_t*, int> pair;
     if (is) {
-    // get length of file:
-    is.seekg (0, is.end);
-    int length = is.tellg();
-    is.seekg (0, is.beg);
+        // get length of file:
+        is.seekg (0, is.end);
+        int length = is.tellg();
+        is.seekg (0, is.beg);
 
-    char * buffer = new char [length];
-    
-    std::cout << "Reading " << length << " characters... ";
-    is.read (buffer,length);
+        char * buffer = new char [length];
+        
+        std::cout << "Reading " << length << " characters... ";
+        is.read (buffer,length);
 
-    short* new_buffer=(short*)buffer;
+        short* new_buffer=(short*)buffer;
 
-    if (is)
-      std::cout << "all characters read successfully.";
-    else
-      std::cout << "error: only " << is.gcount() << " could be read";
-    is.close();
-    
-    return new_buffer;
+        if (is)
+            std::cout << "all characters read successfully." << std::endl;
+        else
+            std::cout << "error: only " << is.gcount() << " could be read";
+        is.close();
+        
+        pair.first = new_buffer;
+        // char to short
+        pair.second = length / 2;
+        
     }
+
+    return pair;
 }
 
 

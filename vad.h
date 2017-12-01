@@ -21,7 +21,7 @@ public:
     bool IsSpeech(const int16_t *data, int num_point_per_frame, int sample_rate);
     char SlideWindow(int tag);
     void ResetWindow();
-    int16_t* ReadPcm(std::string path);
+    std::pair<int16_t*, int> ReadPcm(std::string path);
     
     float _VOICE_THRED_ = 0.9f;
     int window_len_ = 0;
