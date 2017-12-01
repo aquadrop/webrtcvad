@@ -112,6 +112,7 @@ short* ReadPcm() {
     is.close();
     
     return new_buffer;
+    }
 }
 
 
