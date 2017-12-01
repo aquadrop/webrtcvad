@@ -26,6 +26,7 @@
 *.exe
 *.out
 *.app
+*.wav
 
 build
 lib

@@ -1,0 +1,1 @@
+./apply-vad --frame-len=30 --mode=3 test.wav test.3.wav

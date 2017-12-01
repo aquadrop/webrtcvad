@@ -3,126 +3,10 @@
 #include <assert.h>
 
 #include <vector>
-#include <queue>
-#include <iostream>
 
 #include "test/parse-option.h"
 #include "test/wav.h"
 #include "vad.h"
-
-using namespace std;
-
-class ApplyVAD {
-public:
-    ApplyVAD(Vad vad, unsigned short num_channels, unsigned long sample_rate,
-    unsigned short bits_per_sample, unsigned int window_size, unsigned int unit_size):
-        vad(vad),
-        num_channels(num_channels),
-        sample_rate(sample_rate),
-        bits_per_sample(bits_per_sample),
-        window_size(window_size) {
-            block_align = num_channels * bits_per_sample / 8;
-            bytes_per_sec = num_channels * sample_rate * bits_per_sample / 8;
-            bytes_per_unit = unit_size / 1000 * bytes_per_sec;
-            buff_size = window_size / unit_size;
-            num_data = bytes_per_unit / (bits_per_sample / 8);
-            num_sample = num_data / num_channels;
-            num_point_per_unit_frame = (int)(unit_size * sample_rate / 1000);
-            num_unit_frames = buff_size;
-        }
-
-public:
-    bool receive(vector<char> data) {
-        vector<short> data_;
-        for (int i = 0; i < num_data; i++) {
-            switch (bits_per_sample) {
-                case 8: {
-                    char sample;
-                    sample = data[i];
-                    data_.push_back((short)sample);
-                    break;
-                }
-                case 16: {
-                    short sample;
-                    char char0 = data[2*i];
-                    char char1 = data[2*i+1];
-                    sample = (char1 << 8) | (char0 & 0xFF);
-                    data_.push_back((short)sample);
-                    break;
-                }
-                case 32: {
-                    int sample;
-                    char char0 = data[4*i];
-                    char char1 = data[4*i+1];
-                    char char2 = data[4*i+2];
-                    char char3 = data[4*i+3];
-                    short short0 = (char3 << 8) | (char2 & 0xFF);
-                    short short1 = (char1 << 8) | (char0 & 0xFF);
-                    sample = (short1 << 16) | (short0 & 0xFFFF);
-                    data_.push_back((short)sample);
-                    break;
-                }
-                default:
-                    cout << "unsupported quantization bits" << endl;
-                    exit(1);
-            }
-        }
-        vector<short> single_channel_data;
-        for (int i = 0; i < num_sample; i++) {
-            single_channel_data.push_back(data_[i * num_channels]);
-        }
-        buff.push_back(single_channel_data);
-        if (buff.size() == buff_size)
-            return true;
-        else if (buff.size < buff_size)
-            return false;
-        else 
-            buff.erase(buff.begin());
-            return true;
-    }
-
-    int process(vector<char> data) {
-        bool flag = receive(data);
-        if (!flag)
-            return 0; // hold state
-        else
-            vector<bool> vad_result;
-            int num_speech_frames = 0;
-            for (int i = 0; i < buff.size(); i++) {
-                vector<short> tmp = buff[i];
-                short* p_data = new short[tmp.size()];
-                for (int i = 0; i < tmp.size(); i++)
-                    p_data[i] = tmp[i];
-                bool tags = vad.IsSpeech(p_data, num_point_per_unit_frame, sample_rate);
-                // vad_result.push_back(tags);
-                // std::cout<< "tags:" << tags << std::endl;
-                if (tags) num_speech_frames++;
-            }
-            if (num_speech_frames >= num_unit_frames * 0.9)
-                return 1;
-            else
-                return -1;
-    }
-
-private:
-    unsigned short num_channels;
-    unsigned long sample_rate;
-    unsigned short bits_per_sample;
-    unsigned int window_size; // ms
-    unsigned int unit_size; // ms
-    Vad vad;
-
-    unsigned short block_align;
-    unsigned int bytes_per_sec;
-    unsigned int bytes_per_unit;
-    int num_point_per_unit_frame;
-    int num_unit_frames;
-    int num_data;
-    int num_sample;
-    vector<vector<short>> buff;
-    unsigned int buff_size;
-};
-
 
 int main(int argc, char *argv[]) {
     const char *usage = "Apply energy vad for input wav file\n"
@@ -130,6 +14,7 @@ int main(int argc, char *argv[]) {
     ParseOptions po(usage);
 
     int frame_len = 30; // 10 ms
+    int window_len = 300; // 300 ms
     po.Register("frame-len", &frame_len, "frame length in millionsenconds, must be 10/20/30");
     int mode = 3; 
     po.Register("mode", &mode, "vad mode");
@@ -143,7 +28,7 @@ int main(int argc, char *argv[]) {
 
     std::string wav_in = po.GetArg(1), 
          wav_out = po.GetArg(2);
- 
+
     WavReader reader(wav_in.c_str());
 
     printf("input file %s info: \n"
@@ -158,14 +43,14 @@ int main(int argc, char *argv[]) {
     int num_channel = reader.NumChannel();
     int sample_rate = reader.SampleRate();
     int num_sample = reader.NumSample();
+    int bits_per_sample = reader.BitsPerSample();
     int num_point_per_frame = (int)(frame_len * sample_rate / 1000);
-<<<<<<< HEAD
     std::cout << "num_point_per_frame:" << num_point_per_frame << std::endl;
-   
-=======
+
     printf("num_point_per_frame %d\n", num_point_per_frame);
     printf("num_sample %d\n", num_sample);
->>>>>>> f8c27d36571f5b3fb95a5d14f7478b7a9a84f69d
+
+
     short *data = (short *)calloc(sizeof(short), num_sample);
     // Copy first channel
     for (int i = 0; i < num_sample; i++) {
@@ -174,48 +59,54 @@ int main(int argc, char *argv[]) {
     }
 
     printf("mode %d\n", mode);
-    Vad vad(mode);
-
+    printf("frame len %d\n", frame_len);
+    Vad vad(mode, num_channel, sample_rate, bits_per_sample, window_len, frame_len);
     int num_frames = num_sample / num_point_per_frame;
-    std::vector<char> vad_reslut;
+    std::vector<char> vad_result;
+    std::vector<int> tags;
 
     for (int i = 0; i < num_sample; i += num_point_per_frame) {
         // last frame 
         if (i + num_point_per_frame > num_sample) break;
-<<<<<<< HEAD
-        bool tags = vad.IsSpeech(data+i, num_point_per_frame, sample_rate);
-        vad_reslut.push_back(tags);
-        std::cout<< "tags:" << tags << std::endl;
-        if (tags) num_speech_frames++;
-        //printf("%f %d \n", float(i) / sample_rate, (int)tags);
-=======
         char state = vad.GetFrameState(data+i, frame_len, sample_rate);
         vad_reslut.push_back(state);
         std::cout << state;
+        bool tag = vad.IsSpeech(data + i, num_point_per_frame, sample_rate);
+        tags.push_back((int)tag);
+        // char state = vad.SlideWindow(tag);
+        char state = vad.Process(data + i);
+        vad_result.push_back(state);
+        // std::cout << state;
+    }
+    for(std::vector<int>::iterator it = tags.begin(); it != tags.end(); ++it) {
+        std::cout << *it;
+    }
+    std::cout << '\n';
+    for(std::vector<char>::iterator it = vad_result.begin(); it != vad_result.end(); ++it) {
+        std::cout << *it;
     }
     std::cout << '\n';
 
     std::vector<int> vad_begin_idx;
     std::vector<int> vad_end_idx;
-    for (int i = 0; i < vad_reslut.size(); i++) {
-        if (vad_reslut[i] == 'B') {
+    for (int i = 0; i < vad_result.size(); i++) {
+        if (vad_result[i] == 'B') {
             vad_begin_idx.push_back(i);
-        } else if (vad_reslut[i] == 'E') {
+        } else if (vad_result[i] == 'E') {
             vad_end_idx.push_back(i);
         }
->>>>>>> f8c27d36571f5b3fb95a5d14f7478b7a9a84f69d
     }
 
     int num_speech_frames = 0;
     for (int i = 0; i < vad_end_idx.size(); i++) {
-        num_speech_frames += vad_end_idx[i] - vad_begin_idx[i] + 1;
+        num_speech_frames += vad_end_idx[i] - vad_begin_idx[i] + vad.window_len_;
     }
     int num_speech_sample = num_speech_frames * num_point_per_frame;
     short *speech_data = (short *)calloc(sizeof(short), num_speech_sample);
 
     int speech_cur = 0;
     for (int i = 0; i < vad_end_idx.size(); i++) {
-        for (int j = vad_begin_idx[i]; j < vad_end_idx[i]+1; j++) {
+        for (int j = vad_begin_idx[i] - (int)(0.9 * vad.window_len_); j < vad_end_idx[i] + (int)(0.1 * vad.window_len_); j++) {
             memcpy(speech_data + speech_cur * num_point_per_frame,
                    data + j * num_point_per_frame, 
                    num_point_per_frame * sizeof(short));
@@ -231,7 +122,7 @@ int main(int argc, char *argv[]) {
     //     std::cout << *iter << ' ';
     // }
     // std::cout << '\n';
-    
+
     WavWriter writer(speech_data, num_speech_sample, reader.NumChannel(), 
                         reader.SampleRate(), reader.BitsPerSample());
 
