@@ -16,15 +16,18 @@ public:
         unsigned short bits_per_sample, unsigned int window_duration_ms, unsigned int frame_duration_ms); 
     virtual ~Vad();
     void SetMode(int mode);
+    char Process(const int16_t *data);
     bool IsSpeech(const int16_t *data, int num_point_per_frame, int sample_rate);
     char SlideWindow(int tag);
+    void ResetWindow();
+    
     float _VOICE_THRED_ = 0.9f;
+    int window_len_ = 0;
 private:
     int mode_;
     VadInst* handle_;
     bool trigger_;
     std::deque<int> window_;
-    int window_len_ = 0;
     int window_sum_ = 0;
 
     unsigned short num_channels;

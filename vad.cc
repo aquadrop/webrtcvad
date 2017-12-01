@@ -34,10 +34,17 @@ void Vad::SetMode(int mode) {
     WebRtcVad_set_mode(handle_, mode_);
 }
 
+char Vad::Process(const int16_t *data) {
+    bool tag = this->IsSpeech(data, this->num_point_per_frame, this->sample_rate);
+    return this->SlideWindow(tag);
+}
+
+void Vad::ResetWindow() {
+    this->window_.clear();
+}
+
 bool Vad::IsSpeech(const int16_t *data, int num_point_per_frame, int sample_rate) {
-    // printf("%d, %d, %d", num_point_per_frame, sample_rate);
     int ret = WebRtcVad_Process(handle_, sample_rate, data, num_point_per_frame);
-    // printf("%d", ret);
     switch (ret) {
         case 0:
             return false;

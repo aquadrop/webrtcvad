@@ -58,38 +58,48 @@ int main(int argc, char *argv[]) {
     printf("frame len %d\n", frame_len);
     Vad vad(mode, num_channel, sample_rate, bits_per_sample, window_len, frame_len);
     int num_frames = num_sample / num_point_per_frame;
-    std::vector<char> vad_reslut;
+    std::vector<char> vad_result;
+    std::vector<int> tags;
 
     for (int i = 0; i < num_sample; i += num_point_per_frame) {
         // last frame 
         if (i + num_point_per_frame > num_sample) break;
         bool tag = vad.IsSpeech(data + i, num_point_per_frame, sample_rate);
-        char state = vad.SlideWindow(tag);
-        vad_reslut.push_back(state);
-        std::cout << state;
+        tags.push_back((int)tag);
+        // char state = vad.SlideWindow(tag);
+        char state = vad.Process(data + i);
+        vad_result.push_back(state);
+        // std::cout << state;
+    }
+    for(std::vector<int>::iterator it = tags.begin(); it != tags.end(); ++it) {
+        std::cout << *it;
+    }
+    std::cout << '\n';
+    for(std::vector<char>::iterator it = vad_result.begin(); it != vad_result.end(); ++it) {
+        std::cout << *it;
     }
     std::cout << '\n';
 
     std::vector<int> vad_begin_idx;
     std::vector<int> vad_end_idx;
-    for (int i = 0; i < vad_reslut.size(); i++) {
-        if (vad_reslut[i] == 'B') {
+    for (int i = 0; i < vad_result.size(); i++) {
+        if (vad_result[i] == 'B') {
             vad_begin_idx.push_back(i);
-        } else if (vad_reslut[i] == 'E') {
+        } else if (vad_result[i] == 'E') {
             vad_end_idx.push_back(i);
         }
     }
 
     int num_speech_frames = 0;
     for (int i = 0; i < vad_end_idx.size(); i++) {
-        num_speech_frames += vad_end_idx[i] - vad_begin_idx[i] + 1;
+        num_speech_frames += vad_end_idx[i] - vad_begin_idx[i] + vad.window_len_;
     }
     int num_speech_sample = num_speech_frames * num_point_per_frame;
     short *speech_data = (short *)calloc(sizeof(short), num_speech_sample);
 
     int speech_cur = 0;
     for (int i = 0; i < vad_end_idx.size(); i++) {
-        for (int j = vad_begin_idx[i]; j < vad_end_idx[i]+1; j++) {
+        for (int j = vad_begin_idx[i] - (int)(0.9 * vad.window_len_); j < vad_end_idx[i] + (int)(0.1 * vad.window_len_); j++) {
             memcpy(speech_data + speech_cur * num_point_per_frame,
                    data + j * num_point_per_frame, 
                    num_point_per_frame * sizeof(short));
@@ -105,7 +115,7 @@ int main(int argc, char *argv[]) {
     //     std::cout << *iter << ' ';
     // }
     // std::cout << '\n';
-    
+
     WavWriter writer(speech_data, num_speech_sample, reader.NumChannel(), 
                         reader.SampleRate(), reader.BitsPerSample());
 
