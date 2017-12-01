@@ -27,7 +27,7 @@ int Process_Wav(int argc, char* argv[]) {
     }
 
     std::string wav_in = po.GetArg(1), 
-         wav_out = po.GetArg(2);
+    wav_out = po.GetArg(2);
 
     WavReader reader(wav_in.c_str());
 
@@ -234,7 +234,17 @@ int Process_PCM(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-    Process_PCM(argc, argv);
+    int format = 1;
+    // const char *usage = "Apply energy vad for input wav file\n"
+    //                     "Usage: vad-test wav_in_file\n";
+    // ParseOptions po(usage);
+
+    // po.Register("format", &format, "format");
+    if (!format) {
+        Process_Wav(argc, argv);
+    } else {
+        Process_PCM(argc, argv);
+    }
 }
 
 
